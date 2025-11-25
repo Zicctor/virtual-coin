@@ -33,10 +33,13 @@ A desktop cryptocurrency trading application built with PyQt6, featuring Google 
 
 The app uses **Neon PostgreSQL** with the following tables:
 
-- **Users** - User authentication (google_id, email, name)
+- **Users** - User authentication (google_id, email, name, last_login_bonus)
 - **Wallets** - User balances per currency (balance, locked_balance)
-- **Orders** - Trading orders (market/limit/stop-limit, buy/sell)
-- **Transactions** - Complete trade history with fees
+- **PortfolioHistory** - Historical portfolio value tracking
+- **DailyLogins** - Daily login bonus tracking
+- **TradeOffers** - P2P trading offers
+- **UserTransactions** - Complete trade history with fees
+- **P2PTradeTransactions** - P2P trade execution history
 
 ## Project Structure
 
@@ -45,21 +48,28 @@ pyqt_crypto_app/
 ├── main.py                 # Application entry point
 ├── config.py               # Configuration management
 ├── requirements.txt        # Python dependencies
-├── .env.example            # Environment variables template
-├── .env                    # Your credentials (create this)
-├── SETUP.md               # Google OAuth setup guide
-├── SUPABASE_SETUP.md      # Supabase database setup guide
+├── .env                    # Your credentials (NOT in git)
+├── version.py              # App version tracking
+├── package_app.py          # PyInstaller build script
+├── GITHUB_RELEASES_GUIDE.md # Distribution guide
 ├── README.md              # This file
-├── test_database.py       # Database test suite
+├── reset_neon_database.sql # Database reset script
 ├── auth/
 │   ├── __init__.py
-│   └── google_auth.py     # Google OAuth manager with Supabase sync
+│   └── google_auth.py     # Google OAuth manager
 ├── ui/
 │   ├── __init__.py
-│   └── login_window.py    # Login window UI
+│   ├── login_window.py    # Login window UI
+│   ├── trading_window.py  # Main trading interface
+│   ├── leaderboard_window.py # Leaderboard UI
+│   ├── chart_widget.py    # Chart visualization
+│   └── web_chart_widget.py # CoinGecko charts
 ├── utils/
 │   ├── __init__.py
-│   └── database.py        # Supabase database operations
+│   ├── neon_database.py   # Neon PostgreSQL operations
+│   ├── price_service.py   # CoinGecko API integration
+│   ├── update_checker.py  # GitHub update checker
+│   └── freecrypto_service.py # Free crypto faucet
 ├── assets/
 │   ├── icons/             # App icons
 │   │   ├── app_icon.png
@@ -77,41 +87,39 @@ pyqt_crypto_app/
 
 ### Prerequisites
 
-- Python 3.8 or higher
+- Python 3.11 or higher
 - Google Cloud account (for OAuth)
-- Supabase account (free tier available)
+- Neon PostgreSQL account (free tier available)
 
-### 1. Set Up Supabase Database
+### 1. Set Up Neon Database
 
-Follow the detailed guide in [SUPABASE_SETUP.md](SUPABASE_SETUP.md):
-- Create Supabase project
-- Run SQL scripts to create tables (Users, Wallets, Orders, Transactions)
-- Get your project URL and service role key
+Create a Neon PostgreSQL database:
+- Sign up at https://neon.tech
+- Create a new project
+- Run `reset_neon_database.sql` in Neon SQL console to create all tables
+- Copy the connection string from dashboard
 
 ### 2. Set Up Google OAuth
 
-Follow the instructions in [SETUP.md](SETUP.md):
-- Create Google Cloud project
+- Create Google Cloud project at https://console.cloud.google.com
 - Enable Google+ API
-- Create OAuth 2.0 credentials (Desktop app)
-- Download `client_secret.json`
+- Create OAuth 2.0 credentials (Desktop app type)
+- Download `client_secret.json` and place in `credentials/` folder
 
 ### 3. Configure Environment
 
 ```powershell
 cd pyqt_crypto_app
 
-# Copy environment template
-Copy-Item .env.example .env
-
-# Edit .env file and add your credentials
+# Create .env file
 notepad .env
 ```
 
-Add your Supabase credentials:
+Add your Neon database connection:
 ```env
-SUPABASE_URL=https://your-project-id.supabase.co
-SUPABASE_KEY=your-service-role-key-here
+NEON_DATABASE_URL=postgresql://user:password@ep-xxx.region.aws.neon.tech/dbname?sslmode=require
+USE_SIMULATOR=false
+COINGECKO_API_KEY=your-api-key-here
 ```
 
 Place Google credentials:
@@ -128,14 +136,13 @@ pip install -r requirements.txt
 ### 5. Test Database Connection
 
 ```powershell
-python test_database.py
+python check_database.py
 ```
 
 This will:
-- ✅ Verify Supabase connection
-- ✅ Test user creation
-- ✅ Test wallet initialization
-- ✅ Test order/transaction creation
+- ✅ Verify Neon PostgreSQL connection
+- ✅ List all database tables
+- ✅ Show table structures
 
 ### 6. Run the Application
 
@@ -152,10 +159,11 @@ On first run:
 
 ## Requirements
 
-- Python 3.8+
+- Python 3.11+
 - PyQt6 6.6.0+
 - Google OAuth 2.0 credentials
-- Supabase account and database
+- Neon PostgreSQL database
+- CoinGecko API key (free tier)
 
 See `requirements.txt` for complete list of dependencies.
 
@@ -164,12 +172,14 @@ See `requirements.txt` for complete list of dependencies.
 ### Environment Variables (.env)
 
 ```env
-# Supabase
-SUPABASE_URL=https://xxxxx.supabase.co
-SUPABASE_KEY=your_service_role_key
+# Neon PostgreSQL
+NEON_DATABASE_URL=postgresql://user:password@ep-xxx.region.aws.neon.tech/dbname?sslmode=require
 
-# No need to configure Google OAuth in .env
-# It uses credentials/client_secret.json
+# Price API
+USE_SIMULATOR=false
+COINGECKO_API_KEY=your-api-key-here
+
+# Google OAuth uses credentials/client_secret.json
 ```
 
 ### Application Settings (config.py)
@@ -180,74 +190,74 @@ SUPABASE_KEY=your_service_role_key
 
 ## Database Operations
 
-The `utils/database.py` module provides:
+The `utils/neon_database.py` module provides:
 
 **User Operations:**
 - `create_user()` - Create new user with Google OAuth
 - `get_user_by_google_id()` - Retrieve user
-- `get_user_by_email()` - Find user by email
+- `claim_daily_bonus()` - Award 100 USDT daily bonus
 
 **Wallet Operations:**
 - `initialize_user_wallets()` - Set up default wallets
 - `get_user_wallets()` - Get all balances
-- `get_wallet_balance()` - Get specific currency balance
-- `update_wallet_balance()` - Update balance
+- `update_balance()` - Update wallet balance
 
 **Trading Operations:**
-- `create_order()` - Place buy/sell order
-- `execute_market_order()` - Execute trade and update balances
-- `get_user_orders()` - Get order history
-- `cancel_order()` - Cancel pending order
-
-**Transaction History:**
-- `create_transaction()` - Record trade
+- `execute_buy()` - Execute buy order and update balances
+- `execute_sell()` - Execute sell order and update balances
 - `get_user_transactions()` - Get trade history
-- `get_transactions_by_pair()` - Filter by trading pair
 
-**Portfolio:**
-- `get_portfolio_value()` - Calculate total portfolio value in USDT
+**P2P Trading:**
+- `create_trade_offer()` - Create P2P trade offer
+- `accept_trade_offer()` - Accept and execute P2P trade
+- `get_active_trade_offers()` - Get available trade offers
+
+**Leaderboard:**
+- `get_leaderboard()` - Get top traders by portfolio value
 
 ## Development Status
 
 ✅ **Completed:**
 - Google OAuth authentication
-- Supabase database integration
+- Neon PostgreSQL database integration
 - User management system
-- Wallet initialization
-- Order and transaction tracking
+- Wallet initialization and tracking
 - Login window with Binance-style UI
-- Database test suite
+- Main trading interface (buy/sell)
+- Real-time crypto price API (CoinGecko)
+- Portfolio dashboard with charts
+- Daily login bonus system
+- Leaderboard with rankings
+- P2P trading system
+- GitHub releases and auto-updates
+- PyInstaller packaging for distribution
 - Complete documentation
-
-🚧 **In Progress:**
-- Main trading interface
-- Real-time crypto price API integration
-- Trading UI components
-- Portfolio dashboard
-- Chart visualization
 
 ## Testing
 
-Run the database test suite:
+Run database checks:
 
 ```powershell
-python test_database.py
+python check_database.py
 ```
 
-This comprehensive test will:
-1. Verify Supabase connection
-2. Create a test user
-3. Initialize wallets
-4. Test balance updates
-5. Create sample orders
-6. Create sample transactions
-7. Verify all CRUD operations
+Test API connections:
+
+```powershell
+python test_api.py
+```
+
+Test update checker:
+
+```powershell
+python test_update_checker.py
+```
 
 ## Architecture
 
 ```
 ┌─────────────────┐
-│   PyQt6 UI      │  Login, Trading, Portfolio
+│   PyQt6 UI      │  Login, Trading, Portfolio, Leaderboard
 └────────┬────────┘
          │
 ┌────────▼────────┐
@@ -255,11 +265,15 @@ This comprehensive test will:
 └────────┬────────┘
          │
 ┌────────▼────────┐
-│  Supabase DB    │  Users, Wallets, Orders, Transactions
-└────────┬────────┘
-         │
-┌────────▼────────┐
-│  PostgreSQL     │  Cloud Database
+│   Neon DB       │  Users, Wallets, Transactions, P2P Trades
+└─────────────────┘
+         +
+┌─────────────────┐
+│  CoinGecko API  │  Real-time crypto prices
+└─────────────────┘
+         +
+┌─────────────────┐
+│  GitHub API     │  Auto-update checker
 └─────────────────┘
 ```
 
@@ -267,18 +281,19 @@ This comprehensive test will:
 
 ### What's Protected (.gitignore)
 
-- ✅ `.env` (Supabase credentials)
-- ✅ `credentials/client_secret.json` (Google OAuth)
-- ✅ `credentials/token.pickle` (Auth tokens)
+- ✅ `.env` (Neon database connection string + API keys)
+- ✅ `credentials/client_secret.json` (Google OAuth credentials)
+- ✅ `credentials/token.pickle` (User-specific auth tokens)
 - ✅ `__pycache__/` (Python cache)
+- ✅ `build/` and `dist/` (PyInstaller output)
 
 ### Security Best Practices
 
 ⚠️ **Never commit sensitive files!**
-- Use `.env` for all API keys
-- Use `service_role` key (not `anon` key) for Supabase
-- Keep `client_secret.json` private
-- Enable Row Level Security (RLS) on Supabase for production
+- Use `.env` for all API keys and database URLs
+- Keep `client_secret.json` private (don't push to GitHub)
+- Never package `token.pickle` (user-specific, created locally)
+- Share `.env` and `client_secret.json` separately with users (encrypted)
 
 ## License
 
@@ -286,21 +301,28 @@ Private project - All rights reserved
 
 ## Troubleshooting
 
-**"Supabase credentials not configured"**
+**"Database credentials not configured"**
 - Create `.env` file in `pyqt_crypto_app/` folder
-- Add `SUPABASE_URL` and `SUPABASE_KEY`
-- See `.env.example` for template
+- Add `NEON_DATABASE_URL` with full connection string
+- Get connection string from Neon dashboard
 
 **"Client secret file not found"**
 - Download `client_secret.json` from Google Cloud Console
 - Place in `credentials/` folder
-- See `SETUP.md` for instructions
+- OAuth app type must be "Desktop app"
 
 **Database connection fails**
-- Run `python test_database.py` to diagnose
-- Check Supabase project is active (not paused)
-- Verify credentials in `.env` are correct
+- Run `python check_database.py` to diagnose
+- Check Neon project is active (not paused after 5 days inactivity)
+- Verify `NEON_DATABASE_URL` in `.env` is correct
 - Check internet connection
+- Ensure connection string includes `?sslmode=require`
+
+**Prices not updating**
+- Check `COINGECKO_API_KEY` in `.env`
+- CoinGecko free tier: 10,000 calls/month
+- App uses 1 call/minute = ~1,440 calls/month (well under limit)
+- Set `USE_SIMULATOR=true` to test without API
 
 **Icons not showing**
 - Icons downloaded automatically on first setup
@@ -308,15 +330,30 @@ Private project - All rights reserved
 
 ## Documentation
 
-- **[SETUP.md](SETUP.md)** - Google OAuth setup guide
-- **[SUPABASE_SETUP.md](SUPABASE_SETUP.md)** - Complete database setup
+- **[GITHUB_RELEASES_GUIDE.md](GITHUB_RELEASES_GUIDE.md)** - How to create releases and distribute updates
+- **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)** - PyInstaller packaging guide
+- **[HISTORICAL_DATA_README.md](HISTORICAL_DATA_README.md)** - Historical price data setup
 - **[assets/ICONS_GUIDE.md](assets/ICONS_GUIDE.md)** - Icon customization
-- **[.env.example](.env.example)** - Environment variables template
+- **[reset_neon_database.sql](reset_neon_database.sql)** - Database schema
+
+## Building for Distribution
+
+```powershell
+# Install dependencies
+pip install -r requirements.txt
+
+# Build executable
+python package_app.py
+
+# Output in: dist/DuckyTrading/
+```
+
+See [GITHUB_RELEASES_GUIDE.md](GITHUB_RELEASES_GUIDE.md) for publishing releases.
 
 ## Support
 
 For issues:
 1. Check documentation files above
-2. Run `python test_database.py` for database diagnostics
-3. Verify `.env` configuration
-4. Check Supabase dashboard for table structure
+2. Run `python check_database.py` for database diagnostics
+3. Verify `.env` configuration (NEON_DATABASE_URL, COINGECKO_API_KEY)
+4. Check Neon console for table structure
