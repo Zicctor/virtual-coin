@@ -163,13 +163,14 @@ class CryptoTradingApp:
             print("❌ ERROR: No db_user found - cannot open trading window")
             print("Please check your database configuration in .env file")
             # Show error message
-            from PyQt6.QtWidgets import QMessageBox
-            msg = QMessageBox()
-            msg.setIcon(QMessageBox.Icon.Critical)
-            msg.setText("Database Error")
-            msg.setInformativeText("Could not load user data from database.\n\nPlease check:\n1. Database is running\n2. .env configuration is correct\n3. Run reset_database.py if needed")
-            msg.setWindowTitle("Error")
-            msg.exec()
+            from ui import styled_dialogs
+            from PyQt6.QtWidgets import QWidget
+            temp_widget = QWidget()
+            styled_dialogs.show_error(
+                temp_widget, 
+                "Database Error", 
+                "Could not load user data from database.\n\nPlease check:\n1. Database is running\n2. .env configuration is correct\n3. Run reset_neon_database.sql if needed"
+            )
             sys.exit(1)
     
     def get_icon_path(self, icon_name):

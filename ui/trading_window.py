@@ -4,7 +4,7 @@ from decimal import Decimal
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                              QLabel, QPushButton, QLineEdit, QComboBox, QTableWidget,
                              QTableWidgetItem, QHeaderView, QTabWidget, QFrame,
-                             QMessageBox, QSplitter, QScrollArea, QButtonGroup)
+                             QSplitter, QScrollArea, QButtonGroup)
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QThread
 from PyQt6.QtGui import QFont, QIcon, QColor
 from utils.db_factory import get_database
@@ -12,6 +12,7 @@ from utils.price_service import get_price_service
 from utils.freecrypto_service import get_freecrypto_service
 from utils.update_checker import UpdateChecker
 from ui.web_chart_widget import CoinGeckoChartWidget
+from ui import styled_dialogs
 from config import Config
 from version import VERSION, APP_NAME
 
@@ -1099,18 +1100,18 @@ class TradingWindow(QMainWindow):
             requesting_amount = self.request_amount_input.text()
             
             if not offering_amount or not requesting_amount:
-                QMessageBox.warning(self, "Invalid Input", "Please enter both amounts.")
+                styled_dialogs.show_warning(self, "Invalid Input", "Please enter both amounts.")
                 return
             
             offering_amount = float(offering_amount)
             requesting_amount = float(requesting_amount)
             
             if offering_amount <= 0 or requesting_amount <= 0:
-                QMessageBox.warning(self, "Invalid Amount", "Amounts must be greater than 0.")
+                styled_dialogs.show_warning(self, "Invalid Amount", "Amounts must be greater than 0.")
                 return
             
             if offering_currency == requesting_currency:
-                QMessageBox.warning(self, "Invalid Trade", "You cannot trade a currency for itself.")
+                styled_dialogs.show_warning(self, "Invalid Trade", "You cannot trade a currency for itself.")
                 return
             
             # Create the offer in database
@@ -1123,17 +1124,17 @@ class TradingWindow(QMainWindow):
             )
             
             if result['success']:
-                QMessageBox.information(self, "Offer Created", "Your trade offer has been created successfully!")
+                styled_dialogs.show_success(self, "Offer Created ✨", "Your trade offer has been created successfully!")
                 self.offer_amount_input.clear()
                 self.request_amount_input.clear()
                 self.refresh_p2p_offers()
             else:
-                QMessageBox.warning(self, "Failed", result.get('error', 'Failed to create offer'))
+                styled_dialogs.show_warning(self, "Failed", result.get('error', 'Failed to create offer'))
                 
         except ValueError:
-            QMessageBox.warning(self, "Invalid Input", "Please enter valid numbers.")
+            styled_dialogs.show_warning(self, "Invalid Input", "Please enter valid numbers.")
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"An error occurred: {str(e)}")
+            styled_dialogs.show_error(self, "Error", f"An error occurred: {str(e)}")
     
     def refresh_p2p_offers(self):
         """Refresh the P2P offers tables."""
@@ -1197,7 +1198,7 @@ class TradingWindow(QMainWindow):
             result = self.db.accept_trade_offer(self.user_id, offer_id)
             
             if result['success']:
-                QMessageBox.information(
+                styled_dialogs.show_success(
                     self,
                     "Trade Completed! 🎉",
                     f"Trade successful!\n\n"
@@ -1206,32 +1207,29 @@ class TradingWindow(QMainWindow):
                 )
                 self.force_refresh_all()
             else:
-                QMessageBox.warning(self, "Trade Failed", result.get('error', 'Failed to complete trade'))
+                styled_dialogs.show_warning(self, "Trade Failed", result.get('error', 'Failed to complete trade'))
                 
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"An error occurred: {str(e)}")
+            styled_dialogs.show_error(self, "Error", f"An error occurred: {str(e)}")
     
     def cancel_trade_offer(self, offer_id):
         """Cancel a P2P trade offer."""
         try:
-            reply = QMessageBox.question(
+            if styled_dialogs.show_question(
                 self,
                 "Cancel Offer",
-                "Are you sure you want to cancel this trade offer?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-            )
-            
-            if reply == QMessageBox.StandardButton.Yes:
+                "Are you sure you want to cancel this trade offer?"
+            ):
                 result = self.db.cancel_trade_offer(offer_id, self.user_id)
                 
                 if result['success']:
-                    QMessageBox.information(self, "Offer Cancelled", "Your trade offer has been cancelled and funds have been returned.")
+                    styled_dialogs.show_success(self, "Offer Cancelled", "Your trade offer has been cancelled and funds have been returned.")
                     self.force_refresh_all()
                 else:
-                    QMessageBox.warning(self, "Failed", result.get('error', 'Failed to cancel offer'))
+                    styled_dialogs.show_warning(self, "Failed", result.get('error', 'Failed to cancel offer'))
                     
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"An error occurred: {str(e)}")
+            styled_dialogs.show_error(self, "Error", f"An error occurred: {str(e)}")
     
     def refresh_transaction_history(self):
         """Refresh the full transaction history."""
@@ -2019,12 +2017,12 @@ class TradingWindow(QMainWindow):
         try:
             amount_text = self.buy_amount_input.text()
             if not amount_text:
-                QMessageBox.warning(self, "Invalid Input", "Please enter an amount.")
+                styled_dialogs.show_warning(self, "Invalid Input", "Please enter an amount.")
                 return
             
             amount = float(amount_text)
             if amount <= 0:
-                QMessageBox.warning(self, "Invalid Amount", "Amount must be greater than 0.")
+                styled_dialogs.show_warning(self, "Invalid Amount", "Amount must be greater than 0.")
                 return
             
             coin = self.buy_coin_combo.currentText()
@@ -2033,7 +2031,7 @@ class TradingWindow(QMainWindow):
             # Get current price
             current_price = self.price_service.get_pair_price(pair)
             if not current_price:
-                QMessageBox.warning(self, "Price Error", "Unable to fetch current price. Please try again.")
+                styled_dialogs.show_warning(self, "Price Error", "Unable to fetch current price. Please try again.")
                 return
             
             # Execute market order
@@ -2046,7 +2044,7 @@ class TradingWindow(QMainWindow):
             )
             
             if result['success']:
-                QMessageBox.information(
+                styled_dialogs.show_success(
                     self, 
                     "Order Executed ✅",
                     f"Successfully bought {coin}!\n\n"
@@ -2062,28 +2060,28 @@ class TradingWindow(QMainWindow):
                 # Force refresh all displays
                 self.force_refresh_all()
             else:
-                QMessageBox.warning(
+                styled_dialogs.show_warning(
                     self,
                     "Order Failed",
                     f"Order execution failed:\n{result.get('error', 'Unknown error')}"
                 )
                 
         except ValueError:
-            QMessageBox.warning(self, "Invalid Input", "Please enter a valid number.")
+            styled_dialogs.show_warning(self, "Invalid Input", "Please enter a valid number.")
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"An error occurred: {str(e)}")
+            styled_dialogs.show_error(self, "Error", f"An error occurred: {str(e)}")
     
     def execute_sell(self):
         """Execute a sell order (sell coin for USDT)."""
         try:
             amount_text = self.sell_amount_input.text()
             if not amount_text:
-                QMessageBox.warning(self, "Invalid Input", "Please enter an amount.")
+                styled_dialogs.show_warning(self, "Invalid Input", "Please enter an amount.")
                 return
             
             amount = float(amount_text)
             if amount <= 0:
-                QMessageBox.warning(self, "Invalid Amount", "Amount must be greater than 0.")
+                styled_dialogs.show_warning(self, "Invalid Amount", "Amount must be greater than 0.")
                 return
             
             coin = self.sell_coin_combo.currentText()
@@ -2092,7 +2090,7 @@ class TradingWindow(QMainWindow):
             # Get current price
             current_price = self.price_service.get_pair_price(pair)
             if not current_price:
-                QMessageBox.warning(self, "Price Error", "Unable to fetch current price. Please try again.")
+                styled_dialogs.show_warning(self, "Price Error", "Unable to fetch current price. Please try again.")
                 return
             
             # Execute market order
@@ -2105,32 +2103,30 @@ class TradingWindow(QMainWindow):
             )
             
             if result['success']:
-                QMessageBox.information(
-                    self, 
+                styled_dialogs.show_success(
+                    self,
                     "Order Executed ✅",
                     f"Successfully sold {coin}!\n\n"
                     f"Amount: {amount:.8f} {coin}\n"
                     f"Price: ${current_price:,.2f}\n"
                     f"Total: ${amount * current_price:.2f} USDT\n"
                     f"Fee: ${result['fee']:.2f}"
-                )
-                
-                # Clear input
+                )                # Clear input
                 self.sell_amount_input.clear()
                 
                 # Force refresh all displays
                 self.force_refresh_all()
             else:
-                QMessageBox.warning(
+                styled_dialogs.show_warning(
                     self,
                     "Order Failed",
                     f"Order execution failed:\n{result.get('error', 'Unknown error')}"
                 )
                 
         except ValueError:
-            QMessageBox.warning(self, "Invalid Input", "Please enter a valid number.")
+            styled_dialogs.show_warning(self, "Invalid Input", "Please enter a valid number.")
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"An error occurred: {str(e)}")
+            styled_dialogs.show_error(self, "Error", f"An error occurred: {str(e)}")
     
     def force_refresh_all(self):
         """Force refresh all displays after trading."""
@@ -2191,14 +2187,11 @@ class TradingWindow(QMainWindow):
         """Handle logout."""
         from auth.google_auth import GoogleAuthManager
         
-        reply = QMessageBox.question(
+        if styled_dialogs.show_question(
             self,
             "Logout",
-            "Are you sure you want to logout?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-        )
-        
-        if reply == QMessageBox.StandardButton.Yes:
+            "Are you sure you want to logout?"
+        ):
             auth = GoogleAuthManager()
             auth.logout()
             
@@ -2215,7 +2208,7 @@ class TradingWindow(QMainWindow):
             result = self.db.claim_daily_bonus(self.user_id)
             
             if result['success']:
-                QMessageBox.information(
+                styled_dialogs.show_success(
                     self,
                     "Daily Bonus Claimed! 🎉",
                     result['message']
@@ -2223,13 +2216,13 @@ class TradingWindow(QMainWindow):
                 # Refresh wallet display
                 self.update_wallet_display()
             else:
-                QMessageBox.warning(
+                styled_dialogs.show_info(
                     self,
                     "Daily Bonus",
                     result['message']
                 )
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to claim bonus: {e}")
+            styled_dialogs.show_error(self, "Error", f"Failed to claim bonus: {e}")
     
     def show_leaderboard(self):
         """Show leaderboard window."""
@@ -2238,7 +2231,7 @@ class TradingWindow(QMainWindow):
             self.leaderboard_window = LeaderboardWindow(self.user_id)
             self.leaderboard_window.show()
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to open leaderboard: {e}")
+            styled_dialogs.show_error(self, "Error", f"Failed to open leaderboard: {e}")
     
     def get_icon_path(self, icon_name):
         """Get the absolute path to an icon file."""
@@ -2959,24 +2952,16 @@ class TradingWindow(QMainWindow):
             
             if result.get('update_available'):
                 # Show update notification
-                msg = QMessageBox(self)
-                msg.setWindowTitle("Update Available")
-                msg.setIcon(QMessageBox.Icon.Information)
+                message = f"""New version available!
+
+Current version: v{result['current_version']}
+Latest version: v{result['latest_version']}
+
+{result.get('release_name', 'New Release')}
+
+Would you like to download the update?"""
                 
-                text = f"""
-                <h3>New version available!</h3>
-                <p><b>Current version:</b> v{result['current_version']}</p>
-                <p><b>Latest version:</b> v{result['latest_version']}</p>
-                <br>
-                <p>{result.get('release_name', 'New Release')}</p>
-                """
-                
-                msg.setText(text)
-                msg.setInformativeText("Would you like to download the update?")
-                msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-                msg.setDefaultButton(QMessageBox.StandardButton.Yes)
-                
-                if msg.exec() == QMessageBox.StandardButton.Yes:
+                if styled_dialogs.show_question(self, "Update Available 🚀", message):
                     # Open download URL in browser
                     import webbrowser
                     webbrowser.open(result['download_url'])

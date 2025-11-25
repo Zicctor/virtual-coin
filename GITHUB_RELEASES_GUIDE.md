@@ -163,14 +163,16 @@ git push origin v1.0.1
 **Never commit these files:**
 - `.env` (contains database password)
 - `credentials/token.pickle` (user-specific auth)
+- `credentials/client_secret.json` (OAuth app credentials - keep private!)
 - `__pycache__/` (Python cache files)
 
 **Safe to commit:**
-- `credentials/client_secret.json` (OAuth app credentials)
 - All `.py` source files
 - `requirements.txt`
 - `README.md` and docs
+- `assets/` folder (icons, images)
 
 **Share separately with friends:**
 - `.env` file (via secure method like password-protected zip, encrypted message)
+- `credentials/client_secret.json` (include in the zip with your .env)
 - Neon database access (add them as collaborator in Neon console)

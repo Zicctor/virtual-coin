@@ -206,13 +206,8 @@ class LoginWindow(QWidget):
     
     def show_error(self, message):
         """Show error message."""
-        from PyQt6.QtWidgets import QMessageBox
-        msg = QMessageBox(self)
-        msg.setIcon(QMessageBox.Icon.Warning)
-        msg.setWindowTitle("Authentication Error")
-        msg.setText(message)
-        msg.setStandardButtons(QMessageBox.StandardButton.Ok)
-        msg.exec()
+        from ui import styled_dialogs
+        styled_dialogs.show_error(self, "Authentication Error", message)
     
     def get_icon_path(self, icon_name):
         """Get the absolute path to an icon file."""
