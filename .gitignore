@@ -20,6 +20,7 @@ dist/
 .env
 credentials/token.pickle
 credentials/token.json
+credentials/client_secret.json
 
 # IDE
 .vscode/
