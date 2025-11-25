@@ -4,6 +4,8 @@ This guide explains how to distribute updates to your friends using GitHub relea
 
 ## Initial Setup (One-time)
 
+### For Developer:
+
 ### 1. Create GitHub Repository
 - Go to https://github.com/Zicctor/virtual-coin
 - Repository should be public (so friends can download without GitHub accounts)
@@ -18,6 +20,31 @@ git branch -M master
 git remote add origin https://github.com/Zicctor/virtual-coin.git
 git push -u origin master
 ```
+
+### For Your Friends (First Time Setup):
+
+**Option A: Git Clone (Enables auto-updates)**
+1. Install Git: https://git-scm.com/download/win
+2. Open PowerShell or Command Prompt
+3. Clone the repository:
+   ```powershell
+   git clone https://github.com/Zicctor/virtual-coin.git
+   cd virtual-coin/pyqt_crypto_app
+   ```
+4. Get `.env` and `credentials/client_secret.json` from you (send separately)
+5. Place them in the `pyqt_crypto_app` folder
+6. Run the app: `dist/DuckyTrading/DuckyTrading.exe`
+
+**Future updates:** Just double-click `update.bat` or run `python update.py`
+
+**Option B: Download Release Zip (Manual updates only)**
+1. Go to https://github.com/Zicctor/virtual-coin/releases/latest
+2. Download `DuckyTrading-vX.X.X.zip`
+3. Extract anywhere
+4. Get `.env` and `credentials/client_secret.json` from you
+5. Run `DuckyTrading.exe`
+
+**Future updates:** Download new zip and replace files
 
 ## Creating a New Release
 
@@ -61,18 +88,54 @@ git push origin master
    - Improved error messages
    
    ## Installation
+   
+   ### New Users
    1. Download `DuckyTrading-v1.0.1.zip`
    2. Extract the zip file
    3. Run `DuckyTrading.exe`
    
+   ### Existing Users with Git
+   **Easiest way:** Just run `update.bat` or `python update.py`
+   
+   Or manually:
+   ```
+   git pull origin master
+   python package_app.py
+   ```
+   
+   ### Existing Users without Git
+   1. Download `DuckyTrading-v1.0.1.zip`
+   2. Extract and replace old files
+   3. Keep your existing `.env` and `credentials/` folder
+   
    ## Requirements
    - Get `.env` file from developer (contains database connection)
+   - Get `credentials/client_secret.json` from developer (for Google login)
    ```
 6. **Attach files:** Drag `DuckyTrading-v1.0.1.zip` to the upload area
 7. Click "Publish release"
 
 ## Your Friends' Update Process
 
+### Option 1: Auto-Update (Recommended - No Re-download!)
+If they already have the app installed with git:
+
+1. **Double-click `update.bat`** (or run `python update.py`)
+2. Script checks GitHub for new version
+3. Shows what's new (changelog)
+4. Asks "Do you want to update? (Y/N)"
+5. If Yes:
+   - Backs up current executable
+   - Pulls latest code from GitHub
+   - Installs any new dependencies
+   - Rebuilds the app automatically
+6. Done! App is updated without re-downloading
+
+**Requirements:**
+- Git installed on their computer
+- Original installation was cloned from GitHub (not just extracted from zip)
+
+### Option 2: Manual Download (If auto-update doesn't work)
 When they launch the app:
 1. App checks GitHub for new version (happens automatically)
 2. If update available, shows popup: "New version available! v1.0.1"
@@ -107,7 +170,31 @@ Examples:
 
 ## Troubleshooting
 
-### "Update available" shows but no new version exists
+### Auto-updater issues
+
+**"Git is not installed or not in PATH"**
+- Install Git from https://git-scm.com/download/win
+- Restart computer after installation
+- Try running `update.bat` again
+
+**"Not a git repository"**
+- The app was installed from a zip file, not cloned with git
+- Solution: Use manual download method instead
+- Or: Delete app folder and clone fresh with `git clone`
+
+**"Build failed"**
+- Check if Python is installed and in PATH
+- Check if all dependencies are installed: `pip install -r requirements.txt`
+- Your backup is saved as `DuckyTrading.exe.backup`
+
+**Update script shows "Already up to date" but app says update available**
+- The in-app checker looks at GitHub releases (tags)
+- The update script looks at code commits
+- Wait for developer to create an official release
+
+### In-app update checker issues
+
+**"Update available" shows but no new version exists**
 - Make sure git tag matches version.py: `v1.0.1` in both places
 - Check that zip file is uploaded to the release
 - Wait a few minutes for GitHub's cache to update
