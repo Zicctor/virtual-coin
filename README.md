@@ -26,8 +26,10 @@ A desktop cryptocurrency trading application built with PyQt6, featuring Google 
 
 **For Users:**
 - App automatically checks for updates on startup
-- Download latest version from GitHub Releases
+- **Auto-Update:** Run `update.bat` (if installed with git)
+- **Manual Update:** Download from GitHub Releases
 - Get `.env` file from developer (contains database connection)
+- **Upgrading from old versions?** See [UPGRADE_GUIDE.md](UPGRADE_GUIDE.md)
 
 ## Database Schema
 
