@@ -1,0 +1,3 @@
+VERSION = "1.0.0"
+APP_NAME = "DuckyTrading"
+RELEASE_DATE = "2025-11-25"
